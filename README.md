@@ -1,58 +1,83 @@
 # Universal Video Transcript Extractor
 
-在 Apple Silicon Mac 擷取影片字幕，或用 MLX Whisper 在本機轉錄。輸出支援 UTF-8 TXT、SRT 和 Obsidian Markdown。無需 API Key 或雲端語音辨識。
+A Python CLI for extracting existing video captions or transcribing audio on an Apple Silicon Mac with MLX Whisper. Use it to turn a public video link or a local recording into a timestamped note for Obsidian, plain text, or a SubRip subtitle file.
 
-## 在 Codex Desktop 使用
+## Features
 
-工具安裝後，在 Codex Desktop 輸入下列要求，將括號內的內容換成你的網址或附件。
+- **Implemented** — The default URL workflow tries manual captions, then automatic captions, then local Whisper if the video and audio are accessible. Choose `--captions-only` to skip audio download and speech recognition, or `--force-whisper` for fresh transcription.
+- **Implemented** — Local MP4, MOV, MP3, M4A, and WAV files go directly to Whisper. The default model is `turbo`. Choose `large-v3` for the larger model or specify a language such as Cantonese (`yue`) or Mandarin (`zh`).
+- **Implemented** — Markdown includes timestamps by default, TXT timestamps are opt-in, and SRT always includes both start and end times. Chinese-language cues use OpenCC Simplified-to-Traditional conversion by default. Whisper also writes a `.original.json` file containing its cues before script conversion.
+- **Externally unverified** — The URL adapters attempt anonymous access to YouTube videos and Shorts, Facebook videos and Reels, Instagram posts and Reels, and Threads posts. Threads relies on yt-dlp's generic extraction path. A recognized URL can still fail to yield usable captions or media.
+- **Optional** — The user-installed Codex Skill invokes the same CLI. Its instructions also ask Codex to append an article to Markdown exports unless the user requests a transcript only. That post-processing depends on the agent.
 
-- 「使用 $video-transcript 擷取呢條 YouTube Shorts 嘅字幕，輸出 Obsidian Markdown。（網址）」
-- 「使用 $video-transcript 將呢條 Facebook Reel 轉成繁體中文逐字稿。（網址）」
-- 「使用 $video-transcript 擷取 Instagram Reel 字幕，輸出 SRT。（網址）」
-- 「使用 $video-transcript 將呢條公開 Threads 影片轉成 Markdown。（網址）」
-- 「使用 $video-transcript 轉錄我附上嘅 MP4，語言指定廣東話。」
-- 「使用 $video-transcript 以高準確度模式重新轉錄。（網址或本機檔案）」
+## Requirements
 
-Skill 位於 `~/.agents/skills/video-transcript/`，透過該目錄嘅 `run-tool` 使用本機專案。預設輸出到目前工作目錄嘅 `exports/`，亦可指定 Obsidian vault 內嘅資料夾。Whisper 會額外儲存 `*.original.json`，內容係未經 OpenCC 嘅原語言時間片段。同名結果會加序號。
-
-Markdown 預設顯示時間戳，TXT 可要求加時間戳，SRT 一律保留起止時間。你可以再喺同一個對話要求摘要、攻略整理或根據逐字稿答問題。
-
-## 字幕與平台
-
-| 輸入 | 行為 |
+| Requirement | Repository evidence |
 | --- | --- |
-| YouTube、Shorts、youtu.be | 先檢查 YouTube Transcript API 及 yt-dlp 人工字幕，再試自動字幕。 |
-| Facebook 影片和 Reels | 由 yt-dlp 查詢公開影片及可用字幕，或取得音訊。 |
-| Instagram 貼文和 Reels | 由 yt-dlp 嘗試取得公開影片及可用字幕，或取得音訊。 |
-| Threads | 由 yt-dlp 嘗試從匿名可存取頁面取得公開媒體。上游仍有 [Threads 擷取器請求](https://github.com/yt-dlp/yt-dlp/issues/7523)。 |
-| MP4、MOV、MP3、M4A、WAV | FFmpeg 解碼後交本機 Whisper。 |
+| Native Apple Silicon macOS with Metal for local inference | The installer requires Darwin on `arm64`, and the inference path checks for Metal. The repository declares no minimum macOS version, SDK, or device target. |
+| Python 3.15.x | [pyproject.toml](pyproject.toml) declares `>=3.15,<3.16`. The installer checks for Python 3.15. |
+| uv, FFmpeg, FFprobe, and Node.js | The installer checks that all four tools are present. The health check requires Node.js 22 or later and reports FFmpeg and FFprobe versions. The repository pins no version of uv, FFmpeg, or FFprobe. |
+| Python packages | [requirements.lock](requirements.lock) pins the initial dependency set with hashes, including MLX 0.32.4, mlx-whisper 0.4.3, yt-dlp 2026.10.26, and pytest 9.2.0. The [technical documentation](TECHNICAL_DOCUMENTATION.md#external-dependencies) lists the remaining direct dependencies. |
 
-平台有現成字幕時直接使用。現成字幕不可用時，工具會嘗試取得音訊或提示改用你有權處理嘅本機檔案。登入、付費以及 DRM 限制會照常生效。平台字幕語言由原有軌道決定。指定語言會優先選同語言軌道，亦會用於 Whisper。指定廣東話可用 `yue`。中文軌道預設經 OpenCC 標準簡轉繁，亦可要求保留原字體。Whisper 可能聽錯廣東話、口音、混合語言或片段邊界。
+The CLI uses anonymous access for remote media and model downloads. Setup does not require an API key, account, certificate, or environment file.
 
-## 模型
+## Installation
 
-| 模式 | 模型 | 首次下載 |
-| --- | --- | --- |
-| 快速（預設） | [MLX Whisper Large V3 Turbo](https://huggingface.co/mlx-community/whisper-large-v3-turbo/tree/a4aaeec0636e6fef84abdcbe3544cb2bf7e9f6fb) | 約 1.61 GB |
-| 高準確度 | [MLX Whisper Large V3](https://huggingface.co/mlx-community/whisper-large-v3-mlx/tree/49e6aa286ad60c14352c404340ded53710378a11) | 約 3.08 GB |
+From the root of a checkout, with native Python 3.15 and the tools above available:
 
-未有快取時，工具先回傳模型大小同位置，由 Codex 詢問是否下載。已快取模型可離線重用。快取喺 `~/Library/Caches/UniversalVideoTranscript/models/`。工具以大約 10 分鐘嘅 WAV 片段執行長音訊轉錄，合併全片時間戳。音訊及片段只在本機臨時目錄處理，結束後清理。Codex 執行沙盒有機會隱藏 Metal 或禁止平台網絡，遇到時由 Codex 解釋並按權限重試。
+```sh
+python3.15 -B scripts/install.py
+```
 
-## 檢查、更新及還原
+The installer uses uv to install binary packages from the hash-locked dependency set into a checkout-local release directory. It tests a fresh candidate before pointing `.deps` at it and reuses an existing `.deps` installation. Initial installation requires PyPI access.
 
-- 「檢查 $video-transcript 是否正常。」Codex 會檢查 Python 版本、鎖定依賴、FFmpeg、FFprobe、Node、MLX Metal、CLI、模型快取同 Skill。
-- 「檢查 $video-transcript 有咩更新，先畀我睇計劃。」更新工具查詢 PyPI 上嘅 yt-dlp 同 YouTube Transcript API。Codex 顯示指定套件版本及變更，獲批後才安裝。更新會先喺新嘅專案依賴目錄安裝候選版本並執行離線測試。成功後切換 `.deps` 指向，舊依賴目錄可還原。
-- 「將 $video-transcript 還原到上一組已驗證嘅依賴。」Codex 會先檢查備份，獲批後測試並還原。若要還原程式碼版本，請指定要回到嘅 Git 版本或請 Codex 檢查本機歷史。
+Use `--with-skill` to also install the optional Codex integration under `~/.agents/skills/video-transcript/`. Use `--skill-only` to refresh that registration after checkout dependencies are available. The Skill launcher records the checkout location, so register it again if the checkout moves and the old registration has been addressed.
 
-依賴更新及還原只處理專案依賴。已匯出逐字稿同模型快取可跨版本重用。
+The shell launcher defaults to Homebrew's Apple Silicon Python path. For another native Python 3.15 installation, set `VIDEO_TRANSCRIPT_PYTHON` to the executable path. The separately generated Skill launcher uses the installer interpreter for its maintenance commands.
 
-## 安裝及整合
+## Run
 
-本機以 Apple Silicon Python 3.15、已有嘅 Homebrew FFmpeg/FFprobe、Node 22 以上及 uv 運作。請喺 Codex 要求安裝或修復工具，Codex 會處理以下內部接口。
+From the checkout root:
 
-- `scripts/install.py` 讀取 `requirements.lock`，將套件裝入此專案嘅版本化依賴目錄，再以 `.deps` 指向目前版本。加 `--with-skill` 會一併安裝使用者 Skill，`--skill-only` 可更新已安裝 Skill。安裝依賴需要 PyPI 網絡。
-- `scripts/check.py` 執行本機診斷，`scripts/update.py` 提供 `plan`、`apply` 同 `rollback`。
-- `video-transcript` 係其他 Agent、Shortcuts 或 Raycast 可用嘅穩定入口。內部模型及字幕流程在 `video_transcript.engine.extract`，與匯出及 CLI 分開。
-- CLI 用 `--help` 列出參數。機器整合時，喺來源前加 `--json --`。JSON 包含 `schema_version`、`ok`、輸出路徑、語言、字幕來源、片段數同錯誤原因。退出碼包括無字幕（3）、影片存取失敗（4）、音訊失敗（5）、辨識失敗（6）、待批准下載（7）、模型失敗（8）、寫入失敗（9）、依賴問題（10）及字幕查詢失敗（11）。
+```sh
+./video-transcript --help
+./video-transcript --json --model-info
+./video-transcript --json --language yue -- "./recording.wav"
+./video-transcript --json --captions-only --format srt -- "https://youtu.be/VIDEO_ID"
+```
 
-`requirements.lock` 係初始安裝嘅完整版本及 hash。此版本以 Python 3.15.2、FFmpeg 9.0.2、yt-dlp 2026.10.26、YouTube Transcript API 1.2.5、MLX 0.32.4、mlx-whisper 0.4.3 同 OpenCC Python 0.1.7 做離線檢查。pytest 模擬外部字幕、媒體及模型請求，亦用本機合成 WAV 實際驗證 FFmpeg。真實平台及模型推論測試結果另列於 changelog。
+Replace `./recording.wav` with an existing file and `VIDEO_ID` with a real video ID. The local example runs offline with dependencies and the selected model already installed. A public URL needs network access even when the model is cached. The CLI handles one source per invocation and has no demo mode.
+
+When the model is missing, the CLI returns `MODEL_DOWNLOAD_REQUIRED`. After approving the download, rerun the command with `--allow-model-download` before `--`. The advertised download sizes are approximately 1.61 GB for `turbo` and 3.08 GB for `large-v3`. Models are reused from `~/Library/Caches/UniversalVideoTranscript/models/`.
+
+Outputs default to `exports/` under the working directory. Use `--output-dir` to choose another directory, such as a folder in an Obsidian vault. Existing filenames are preserved by adding a numeric suffix. With `--json`, use `path` and `original_path` to locate the output files. Use `--original-script` to disable script conversion.
+
+With the optional Codex Skill registered, ask Codex to use `$video-transcript` for an attached recording or a public video URL and specify the desired format. Other local clients can call the repository launcher directly.
+
+## Project structure
+
+| Path | Responsibility |
+| --- | --- |
+| [video-transcript](video-transcript) and [scripts/](scripts/) | Checkout launcher, dependency installation, diagnostics, updates, and test runner |
+| [src/video_transcript/](src/video_transcript/) | CLI, source routing, caption selection, local inference, and file export |
+| [skill/video-transcript/](skill/video-transcript/) | Optional Codex workflow instructions |
+| [tests/](tests/) | Offline pytest coverage with mocked upstream calls and a local FFmpeg integration test |
+
+## Development
+
+```sh
+python3.15 -I -B scripts/run.py test
+python3.15 -I -B scripts/run.py check
+```
+
+The test command uses installed checkout dependencies. The FFmpeg integration test skips when FFmpeg is unavailable, and installed Skill tests can skip when the Skill is unregistered for this checkout. The diagnostic checks tools, locked package versions, basic Metal computation, model cache presence, and Skill registration. Its overall result includes the optional Skill checks. It does not test live providers or load model weights. See the [testing and validation record](TECHNICAL_DOCUMENTATION.md#testing).
+
+The repository has no configured lint, formatter, type-check, CI, or standalone application build command. Setuptools packaging and the installed console entry point are declared in [pyproject.toml](pyproject.toml). [Maintenance](TECHNICAL_DOCUMENTATION.md#configuration) covers dependency updates and rollback.
+
+## Known limitations
+
+Public sources may be blocked by provider changes, region, rate limits, authentication, or media availability. Use a permitted local copy when anonymous extraction fails. Live and upcoming media, DRM-restricted media, and multi-item extraction are outside the supported yt-dlp path. Recognition quality varies with accents, mixed languages, and audio chunk boundaries. OpenCC changes script only. The current checkout provides a local CLI and an optional Codex integration. Metal visibility and network access depend on the execution environment.
+
+## License
+
+This repository contains no project-wide license declaration or license file. Third-party packages and model weights have their own upstream licensing terms.
