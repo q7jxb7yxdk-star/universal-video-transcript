@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+root=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
+exec "${VIDEO_TRANSCRIPT_PYTHON:-/opt/homebrew/bin/python3.15}" -I -B "$root/scripts/run.py" cli "$@"
