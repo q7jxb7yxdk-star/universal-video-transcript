@@ -1,5 +1,6 @@
 """Offline CLI, filesystem and FFmpeg integration checks."""
 from contextlib import ExitStack
+from dataclasses import replace
 import json
 import os
 from pathlib import Path
@@ -63,12 +64,19 @@ def test_exports(sample_transcript, tmp_path):
     assert "https://youtu.be/dQw4w9WgXcQ" in first.read_text()
     assert "yue（繁體中文）" in first.read_text()
     assert "本機 Whisper（turbo）" in first.read_text()
-    assert r"\[00:00\]" in first.read_text()
-    assert "[00:00]" not in second.read_text()
+    assert first.read_text().split("## Transcript\n\n")[1] == (
+        "\\[00:00\\] 你好世界\n\n\\[01:00:00\\] 第二句\n"
+    )
+    assert second.read_text().split("## Transcript\n\n")[1] == "你好世界\n\n第二句\n"
     assert json.loads(original.read_text())["segments"][0]["text"] == "你好\n世界"
     assert original != original_second
     assert first.stat().st_mode & 0o777 == 0o600
     assert not list(tmp_path.glob(".video-transcript-*"))
+
+
+def test_markdown_joins_multiline_latin_caption(sample_transcript):
+    transcript = replace(sample_transcript, cues=(Cue(0, 2, "First  \r\n\r\n second *line*"),))
+    assert render(transcript, "markdown", True).endswith(r"\[00:00\] First second \*line\*" + "\n")
 
 
 def test_export_does_not_follow_preexisting_symlinks(sample_transcript, tmp_path):

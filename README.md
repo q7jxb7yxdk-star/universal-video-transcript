@@ -52,7 +52,16 @@ When the model is missing, the CLI returns `MODEL_DOWNLOAD_REQUIRED`. After appr
 
 Outputs default to `exports/` under the working directory. Use `--output-dir` to choose another directory, such as a folder in an Obsidian vault. Existing filenames are preserved by adding a numeric suffix. With `--json`, use `path` and `original_path` to locate the output files. Use `--original-script` to disable script conversion.
 
-With the optional Codex Skill registered, ask Codex to use `$video-transcript` for an attached recording or a public video URL and specify the desired format. Other local clients can call the repository launcher directly.
+### Using Codex Desktop
+
+After registering the optional Video Transcript Skill (`$video-transcript`), enter a prompt directly in Codex Desktop. Codex runs the CLI for you, so you can stay in the chat.
+
+- “Use Video Transcript to extract the captions from this YouTube video and export them as Obsidian Markdown. [URL]”
+- “Use Video Transcript to transcribe the attached MP4 in Cantonese and export it as SRT.”
+- “Check whether Video Transcript is working.”
+- “Check for Video Transcript updates and show me the plan first.”
+
+After an update, you can ask Codex to restore the previous dependency set.
 
 ## Project structure
 

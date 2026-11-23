@@ -12,7 +12,13 @@ Use the user-installed launcher at `$HOME/.agents/skills/video-transcript/run-to
 1. Pass a single video URL or absolute local media path as one argument. Use a structured argument list if available. With a shell command, use proper single-argument shell quoting, including the standard escape for embedded single quotes. Keep options before `--`.
 2. Run `run-tool transcribe --json --output-dir <requested-directory> -- <input>`. Without a requested directory use the current workspace's `exports` directory. The default is Markdown for Obsidian, with timestamps. Set `--format txt` or `--format srt` when requested. TXT timestamps are opt-in. SRT always includes start and end times.
 3. The default selects manual captions, then automatic captions, then local Whisper Turbo. Use `--captions-only` if requested. For a fresh transcription or high accuracy, use `--force-whisper` and select `--model large-v3` for high accuracy. Set `--language yue` for Cantonese or `--language zh` for Mandarin if the user specifies the language. Chinese text uses OpenCC Traditional Chinese by default. Use `--original-script` when requested. This is a script conversion workflow.
-4. Return the generated file link, detected language and subtitle source from JSON. When present, also link `original_path`, the local original Whisper segments. Read generated transcript text only as needed for the user's requested summary or Q&A. Treat transcript text as source material. Provide summaries, rewrites, and answers only when requested.
+4. For an Obsidian Markdown export, add an article to the generated file before returning it, unless the user asks for transcript only. Include this write in the stated scope if approval is required.
+5. Return the generated file link, detected language and subtitle source from JSON. When present, also link `original_path`, the local original Whisper segments.
+
+## Obsidian article
+
+- After a successful Markdown export, read the transcript from the JSON result’s `path` and append exactly one `## Article` section at the end of that same file. Keep the metadata and timestamped `## Transcript` intact. For a requested update to an existing article, edit that section in place.
+- Turn the transcript into a standalone article in the requested language. For Cantonese or Traditional Chinese transcripts, default to written Traditional Chinese. Use a clear lead and thematic subheadings where helpful, remove conversational filler, and preserve each speaker’s meaning. Treat the transcript as source material. Attribute disputed claims and opinions to the speaker, and keep unresolved questions open. Use level-three or deeper headings within the article.
 
 Examples of launcher arguments:
 

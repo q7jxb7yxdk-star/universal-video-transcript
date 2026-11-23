@@ -1,6 +1,7 @@
 """UTF-8 text, SubRip, and Obsidian-compatible Markdown."""
 from dataclasses import asdict
 import html
+from itertools import pairwise
 import json
 import os
 from pathlib import Path
@@ -32,6 +33,18 @@ def _markdown(value: str) -> str:
     return re.sub(r"([\\`*_{}\[\]()#!|~+\-])", r"\\\1", escaped)
 
 
+def _single_line_caption(text: str) -> str:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    parts = lines[:1]
+    for previous, current in pairwise(lines):
+        # East Asian text can wrap between characters within a word.
+        if (unicodedata.east_asian_width(previous[-1]) not in {"W", "F"}
+                or unicodedata.east_asian_width(current[0]) not in {"W", "F"}):
+            parts.append(" ")
+        parts.append(current)
+    return "".join(parts)
+
+
 def render(transcript: Transcript, format: str, timestamps: bool) -> str:
     if format == "srt":
         blocks = []
@@ -51,7 +64,7 @@ def render(transcript: Transcript, format: str, timestamps: bool) -> str:
         start = f"[{_clock(int(cue.start * 1000))}] " if timestamps else ""
         text = cue.text
         if markdown:
-            text = "  \n".join(_markdown(line) for line in text.splitlines() if line.strip())
+            text = _markdown(_single_line_caption(text))
             # A leading timestamp can look like a reference link beside square brackets.
             start = _markdown(start)
         lines.append(start + text)
