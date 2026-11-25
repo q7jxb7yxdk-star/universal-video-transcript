@@ -17,7 +17,7 @@ Use the user-installed launcher at `$HOME/.agents/skills/video-transcript/run-to
 
 ## Obsidian article
 
-- After a successful Markdown export, read the transcript from the JSON result’s `path` and append exactly one `## Article` section at the end of that same file. Keep the metadata and timestamped `## Transcript` intact. For a requested update to an existing article, edit that section in place.
+- After a successful Markdown export, read the transcript from the JSON result’s `path` and append exactly one `## Summary` section at the end of that same file. Keep the metadata and timestamped `## Transcript` intact. For a requested update to an existing article, edit that section in place.
 - Turn the transcript into a standalone article in the requested language. For Cantonese or Traditional Chinese transcripts, default to written Traditional Chinese. Use a clear lead and thematic subheadings where helpful, remove conversational filler, and preserve each speaker’s meaning. Treat the transcript as source material. Attribute disputed claims and opinions to the speaker, and keep unresolved questions open. Use level-three or deeper headings within the article.
 
 Examples of launcher arguments:
